@@ -21,8 +21,8 @@ exportREGCoeff <- function(Formula, DF, Panel, model, nameDF, kpi_var) {
 
   if (Panel == 1) {
     cbind(select(DF, Month), OKPIVARS, KPIVARS, VARSCOLS) -> reg_group
-    str_split_fixed(reg_group$Month, pattern = "-", n = 3)[,1] -> reg_group$YEAR
-    str_split_fixed(reg_group$Month, pattern = "-", n = 3)[,2] -> reg_group$MONTH
+    str_split_fixed(reg_group$Month, pattern = "-", n = 3)[, 1] -> reg_group$YEAR
+    str_split_fixed(reg_group$Month, pattern = "-", n = 3)[, 2] -> reg_group$MONTH
     paste0(reg_group$YEAR, "M", reg_group$MONTH) -> reg_group$Month
     reg_group$YEAR <- NULL
     reg_group$MONTH <- NULL
@@ -46,8 +46,8 @@ exportREGCoeff <- function(Formula, DF, Panel, model, nameDF, kpi_var) {
     write.csv(coeffs, paste0(nameDF, "_eq.csv"), row.names = FALSE)
   } else {
     cbind(select(DF, Brand, Month), OKPIVARS, KPIVARS, VARSCOLS) -> reg_group
-    str_split_fixed(reg_group$Month, pattern = "-", n = 3)[,1] -> reg_group$YEAR
-    str_split_fixed(reg_group$Month, pattern = "-", n = 3)[,2] -> reg_group$MONTH
+    str_split_fixed(reg_group$Month, pattern = "-", n = 3)[, 1] -> reg_group$YEAR
+    str_split_fixed(reg_group$Month, pattern = "-", n = 3)[, 2] -> reg_group$MONTH
     paste0(reg_group$YEAR, "M", reg_group$MONTH) -> reg_group$Month
     reg_group$YEAR <- NULL
     reg_group$MONTH <- NULL
@@ -55,7 +55,7 @@ exportREGCoeff <- function(Formula, DF, Panel, model, nameDF, kpi_var) {
     reg_group$Brand <- NULL
     names(reg_group) <- str_replace_all(names(reg_group), c("\\<D\\>" = "_D_", "\\<\\*>" = "_M_", "\\{" = "", "\\}" = "", "\\<A\\>" = "_A_", "\\<S\\>" = "_S_"))
     names(reg_group)[2:ncol(reg_group)] <- toupper(names(reg_group)[2:ncol(reg_group)])
-    #names(reg_group)[3] <- paste("LOG(", names(reg_group)[3], ")", sep = "")
+    # names(reg_group)[3] <- paste("LOG(", names(reg_group)[3], ")", sep = "")
     write.csv(reg_group, paste0(nameDF, "_reg.csv"), row.names = FALSE)
     as.data.frame(model$coefficients) -> coeffs
     toupper(row.names.default(coeffs)) -> coeffs$Variable
@@ -70,7 +70,7 @@ exportREGCoeff <- function(Formula, DF, Panel, model, nameDF, kpi_var) {
     names(coeffs) <- NULL
     coeffs[6, 1] <- "Variable"
     coeffs[6, 2] <- "Coefficient"
-    coeffs[7,] <- c("C", 0, 0, 0, 0)
+    coeffs[7, ] <- c("C", 0, 0, 0, 0)
     write.csv(coeffs, paste0(nameDF, "_eq.csv"), row.names = FALSE)
   }
 }

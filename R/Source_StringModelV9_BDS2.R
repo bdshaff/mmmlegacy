@@ -22,8 +22,8 @@ StringGen <- function(model_string, media_data, nonmedia_data, Panel, start_date
   ifelse(Panel > 1, TYPE <- "Panel", TYPE <- "no")
 
   # Split string
-  kpi.name <- str_split_fixed(string = model_string, pattern = " ~ ", n = 2)[,1]
-  var.names <- str_split_fixed(string = model_string, pattern = " ~ ", n = 2)[,2] # grab RHS vars
+  kpi.name <- str_split_fixed(string = model_string, pattern = " ~ ", n = 2)[, 1]
+  var.names <- str_split_fixed(string = model_string, pattern = " ~ ", n = 2)[, 2] # grab RHS vars
   var.names <- str_split(var.names, pattern = " \\+ ", n = Inf) # split out vars
   var.names <- unlist(c(kpi.name, var.names))
   var.namesM <- unlist(var.names)
@@ -63,13 +63,15 @@ StringGen <- function(model_string, media_data, nonmedia_data, Panel, start_date
   str_replace_all(othervars, c("_Log" = "", "_Lag[0-9]" = "", "_Movavg[0-9]" = "", "_MEANSBY" = "")) %>%
     unique(.) -> Oparams # names of variables without log
   str_replace_all(kpi.name, c("_Log" = "", "<D>" = " ", "<S>" = " ", "\\{" = "", "\\}" = "", "_MEANSBY" = "")) %>%
-    str_split(" ", n = 2) %>% unlist(.) %>% unique(.) -> Kparams
+    str_split(" ", n = 2) %>%
+    unlist(.) %>%
+    unique(.) -> Kparams
 
   ADData <- subset(media_data, select = c(ADparams))
-  #ADData <- as.data.frame(media_data[, colnames(media_data) %in% ADparams]) # grab columns to adresponse
+  # ADData <- as.data.frame(media_data[, colnames(media_data) %in% ADparams]) # grab columns to adresponse
   names(ADData) <- ADparams
   ASData <- subset(media_data, select = c(ASparams))
-  #ASData <- as.data.frame(media_data[, colnames(media_data) %in% ASparams]) # grab columns to adresponse
+  # ASData <- as.data.frame(media_data[, colnames(media_data) %in% ASparams]) # grab columns to adresponse
   names(ASData) <- ASparams
   OData <- nonmedia_data[, colnames(nonmedia_data) %in% Oparams]
   OData <- as.data.frame(OData)
@@ -116,7 +118,7 @@ StringGen <- function(model_string, media_data, nonmedia_data, Panel, start_date
     }
     as.data.frame(ASDataT) -> ASDataT
     names(ASDataT) <- stockvars
-    if (Panel == 1){
+    if (Panel == 1) {
       ASDataT %>%
         cbind(media_data$week) %>%
         mutate(DMA = 100) %>%
@@ -146,17 +148,19 @@ StringGen <- function(model_string, media_data, nonmedia_data, Panel, start_date
   }
 
   # None Adstock and AdResponse Data ---
-  if (length(str_subset(c(othervars, kpi.name), param3)) == 0 ) {
+  if (length(str_subset(c(othervars, kpi.name), param3)) == 0) {
     OData -> OData
   } else {
     as.data.frame(OData) -> OData
-    c(othervars, kpi.name)  %>%
+    c(othervars, kpi.name) %>%
       str_subset(param3) %>%
       str_replace_all(., c("_Log" = "", "_Lag[0-9]" = "", "_Movavg[0-9]" = "")) -> logvars
     logvars[!grepl("\\{", logvars)] -> logvars
-    if (length(logvars) == 0) {OData -> OData} else {
+    if (length(logvars) == 0) {
+      OData -> OData
+    } else {
       select(OData, one_of(c(logvars))) -> logvariables
-      log(logvariables+1) -> logvariables1
+      log(logvariables + 1) -> logvariables1
       unique(logvars) -> logvars
 
       names(logvariables1) <- paste(logvars, "_Log", sep = "")
@@ -167,11 +171,16 @@ StringGen <- function(model_string, media_data, nonmedia_data, Panel, start_date
   }
 
   if (ncol(OData) > 0) {
-    if (Panel == 1) { OData %>% mutate(DMA = 100) -> OData} else {cbind(OData, select(nonmedia_data, brand) ) -> OData }
+    if (Panel == 1) {
+      OData %>% mutate(DMA = 100) -> OData
+    } else {
+      cbind(OData, select(nonmedia_data, brand)) -> OData
+    }
   } else {
-    matrix(data = NA, nrow = length(KData), ncol = 1) -> OData }
+    matrix(data = NA, nrow = length(KData), ncol = 1) -> OData
+  }
   str_replace(names(OData), pattern = "brand", replacement = "DMA") -> names(OData)
-  cbind(nonmedia_data[,c("month")], OData) %>%
+  cbind(nonmedia_data[, c("month")], OData) %>%
     rename(Month = `nonmedia_data[, c("month")]`) %>%
     filter(Month >= start_date & Month <= end_date) -> OKData
 
@@ -184,26 +193,28 @@ StringGen <- function(model_string, media_data, nonmedia_data, Panel, start_date
     rename(Brand = DMA) -> DF
 
   # Lag Data
-  if (length(str_subset(var.names, param4)) == 0 ) {
+  if (length(str_subset(var.names, param4)) == 0) {
     DF -> DF
   } else {
     var.names %>%
       str_subset(param4) -> lagvarsparams
-    as.integer(str_split_fixed(lagvarsparams, pattern = "_Lag", n = 2)[,2]) -> lagparams
+    as.integer(str_split_fixed(lagvarsparams, pattern = "_Lag", n = 2)[, 2]) -> lagparams
     lagvarsparams %>% str_replace_all(., c("_Lag[0-9]" = "")) -> lagvars
     select(DF, one_of(lagvars)) -> lagvariables
     bind_cols(select(DF, Month, Brand), lagvariables) -> lagvariables
 
     testlag <- list()
     for (i in 3:ncol(lagvariables)) {
-      slide(lagvariables, Var = names(lagvariables[i]), GroupVar = names(lagvariables[2]),
-            TimeVar = names(lagvariables[1]), slideBy = -(lagparams[i - 2])) -> testlag[[i]]
+      slide(lagvariables,
+        Var = names(lagvariables[i]), GroupVar = names(lagvariables[2]),
+        TimeVar = names(lagvariables[1]), slideBy = -(lagparams[i - 2])
+      ) -> testlag[[i]]
     }
     bind_cols(testlag) -> testlag
     testlag <- testlag[, !duplicated(colnames(testlag), fromLast = TRUE)]
     names(testlag) <- str_replace_all(names(testlag), pattern = "-", replacement = "_Lag")
     testlag <- cbind(select(testlag, Month, Brand), select(testlag, matches(c(".Lag."))))
-    if (Panel > 1){
+    if (Panel > 1) {
       testlag %>%
         gather("vars", "value", 3:ncol(testlag)) %>%
         dcast(formula = Month ~ Brand + vars, value.var = "value", fun.aggregate = sum) -> testlag
@@ -225,10 +236,12 @@ StringGen <- function(model_string, media_data, nonmedia_data, Panel, start_date
     if (Panel > 1) {
       testlagfill %>%
         gather("vars", "value", 2:ncol(.)) %>%
-        mutate(brand = str_split_fixed(vars, pattern = "_", n = 2)[,1]) %>%
-        mutate(vars = str_split_fixed(vars, pattern = "_", n = 2)[,2]) %>%
+        mutate(brand = str_split_fixed(vars, pattern = "_", n = 2)[, 1]) %>%
+        mutate(vars = str_split_fixed(vars, pattern = "_", n = 2)[, 2]) %>%
         dcast(brand + Month ~ vars, value.var = "value", fun.aggregate = sum) -> testlagfill
-    } else {testlagfill}
+    } else {
+      testlagfill
+    }
 
     cbind(DF, testlagfill) -> DF
     DF <- DF[, !duplicated(colnames(DF), fromLast = TRUE)]
@@ -236,16 +249,16 @@ StringGen <- function(model_string, media_data, nonmedia_data, Panel, start_date
 
 
   # Moving Average
-  if (length(str_subset(var.names, param5)) == 0 ) {
+  if (length(str_subset(var.names, param5)) == 0) {
     DF -> DF
   } else {
     var.names %>%
       str_subset(param5) -> moveaveragename
     moveaveragename %>% str_replace_all(., c("_Movavg[0-9]" = "")) -> movvars
     select(DF, one_of(movvars)) -> movavgdf
-    as.integer(str_split_fixed(moveaveragename, pattern = "_Movavg", n = 2)[,2]) -> movparams
+    as.integer(str_split_fixed(moveaveragename, pattern = "_Movavg", n = 2)[, 2]) -> movparams
 
-    if ( Panel == 1 ) {
+    if (Panel == 1) {
       # Moving Average
       movavgvariables <- list()
       for (i in 1:ncol(movavgdf)) {
@@ -284,8 +297,8 @@ StringGen <- function(model_string, media_data, nonmedia_data, Panel, start_date
       names(movavgfill) <- names(movavgdf)
       movavgfill %>%
         gather("vars", "value", 1:ncol(.)) %>%
-        mutate(brand = str_split_fixed(vars, pattern = "_", n = 2)[,1]) %>%
-        mutate(vars = str_split_fixed(vars, pattern = "_", n = 2)[,2]) %>%
+        mutate(brand = str_split_fixed(vars, pattern = "_", n = 2)[, 1]) %>%
+        mutate(vars = str_split_fixed(vars, pattern = "_", n = 2)[, 2]) %>%
         cbind(select(DF, Month)) %>%
         dcast(brand + Month ~ vars, value.var = "value", fun.aggregate = sum) -> movavgfill
       names(movavgfill)[3] <- moveaveragename
@@ -296,13 +309,14 @@ StringGen <- function(model_string, media_data, nonmedia_data, Panel, start_date
 
   # Dummy Dates
   dummy_date <- function(dummies) {
-    data <- DF[,c("Month")]
+    data <- DF[, c("Month")]
     ifelse(data == dummies, 1, 0) %>% as.data.frame(.) -> dum
     names(dum) <-
       paste("DUM_", dummies, sep = "")
-    return(dum) }
+    return(dum)
+  }
 
-  if (length(str_subset(var.names, param6)) == 0 ) {
+  if (length(str_subset(var.names, param6)) == 0) {
     DF -> DF
   } else {
     var.names %>%
@@ -320,7 +334,6 @@ StringGen <- function(model_string, media_data, nonmedia_data, Panel, start_date
     if (Panel == 1) {
       cbind(DF, dum_all) -> DF
     } else {
-
       dummiesPanel <- list()
       dummiesPanel1 <- list()
       for (i in 1:ncol(dum_all)) {
@@ -335,15 +348,16 @@ StringGen <- function(model_string, media_data, nonmedia_data, Panel, start_date
   }
 
   # Dummy Range
-  rep.row <- function(x,n){
+  rep.row <- function(x, n) {
     matrix(rep(x, each = n), nrow = n)
   }
-  dummy_range <- function(dummyRanges){
+  dummy_range <- function(dummyRanges) {
     str_split(dummyRanges, "-to-", n = Inf) %>% unlist(.) -> Range1
     as.Date(Range1[[1]], "%Y-%m-%d") -> fromD
     as.Date(Range1[[2]], "%Y-%m-%d") -> toD
     seq.Date(from = fromD, to = toD, by = "month") %>%
-      as.data.frame(.) %>% mutate(range = 1) -> Range2
+      as.data.frame(.) %>%
+      mutate(range = 1) -> Range2
     left_join(as.data.frame(DF$Month), as.data.frame(Range2), by = c("DF$Month" = ".")) %>%
       select(range) -> Range2
     Range2[is.na(Range2)] <- 0
@@ -352,37 +366,38 @@ StringGen <- function(model_string, media_data, nonmedia_data, Panel, start_date
     return(Range2)
   }
 
-  if (length(str_subset(var.names, param11)) == 0 ) {
-    DF -> DF } else {
-      var.names %>%
-        str_subset(param11) %>%
-        str_replace_all(., c("RANGE_" = "", "_" = "-")) -> dummyRanges
+  if (length(str_subset(var.names, param11)) == 0) {
+    DF -> DF
+  } else {
+    var.names %>%
+      str_subset(param11) %>%
+      str_replace_all(., c("RANGE_" = "", "_" = "-")) -> dummyRanges
 
-      rangedates <- list()
-      for (i in 1:length(dummyRanges)) {
-        dummy_range(dummyRanges[i]) -> rangedates[i]
-      }
-      as.data.frame(rangedates) -> rangedates
+    rangedates <- list()
+    for (i in 1:length(dummyRanges)) {
+      dummy_range(dummyRanges[i]) -> rangedates[i]
+    }
+    as.data.frame(rangedates) -> rangedates
+    names(rangedates) <- paste("RANGE_", dummyRanges, sep = "")
+    names(rangedates) <- str_replace_all(names(rangedates), pattern = "-", replacement = "_")
+    if (Panel == 1) {
+      cbind(DF, rangedates) -> DF
+    } else {
+      # rep.row(rangedates, Panel) %>%
+      #   unlist(.) %>%
+      #   matrix(nrow = length(DF$Month)*Panel) %>%
+      #   as.data.frame(.) -> panelRange
       names(rangedates) <- paste("RANGE_", dummyRanges, sep = "")
       names(rangedates) <- str_replace_all(names(rangedates), pattern = "-", replacement = "_")
-      if (Panel == 1) {
-        cbind(DF, rangedates) -> DF
-      } else{
-        # rep.row(rangedates, Panel) %>%
-        #   unlist(.) %>%
-        #   matrix(nrow = length(DF$Month)*Panel) %>%
-        #   as.data.frame(.) -> panelRange
-        names(rangedates) <- paste("RANGE_", dummyRanges, sep = "")
-        names(rangedates) <- str_replace_all(names(rangedates), pattern =  "-", replacement = "_")
-        cbind(DF, rangedates) -> DF
-      }
+      cbind(DF, rangedates) -> DF
     }
+  }
 
   # Meansby ----
-  if ( Panel == 1) {
+  if (Panel == 1) {
     print("Single Panel")
   } else {
-    if (sum(str_detect(var.names, c("_MEANSBY"))) == 0 ) {
+    if (sum(str_detect(var.names, c("_MEANSBY"))) == 0) {
       DF -> DF
     } else {
       var.names %>%
@@ -396,7 +411,6 @@ StringGen <- function(model_string, media_data, nonmedia_data, Panel, start_date
         summarise(meanKPI = mean(KPI_Panel)) -> meanKPI
       names(meanKPI)[2] <- paste(varsMB, "_MEANSBY", sep = "")
       left_join(DF, meanKPI) -> DF
-
     }
   }
 
@@ -430,8 +444,9 @@ StringGen <- function(model_string, media_data, nonmedia_data, Panel, start_date
 
     varsAdd <- list()
     for (i in 1:length(varsA)) {
-      DF %>% select(one_of(varsA[[i]])) %>%
-        mutate(.[,c(1)] + .[,c(2)]) -> varsAdd[[i]]
+      DF %>%
+        select(one_of(varsA[[i]])) %>%
+        mutate(.[, c(1)] + .[, c(2)]) -> varsAdd[[i]]
     }
 
     varsAdd %>%
@@ -453,8 +468,9 @@ StringGen <- function(model_string, media_data, nonmedia_data, Panel, start_date
 
     varsMul <- list()
     for (i in 1:length(varsM)) {
-      DF %>% select(one_of(varsM[[i]])) %>%
-        mutate(.[,c(1)]*.[,c(2)]) -> varsMul[[i]]
+      DF %>%
+        select(one_of(varsM[[i]])) %>%
+        mutate(.[, c(1)] * .[, c(2)]) -> varsMul[[i]]
     }
 
     varsMul %>%
@@ -477,8 +493,9 @@ StringGen <- function(model_string, media_data, nonmedia_data, Panel, start_date
 
     varsDiv <- list()
     for (i in 1:length(varsD)) {
-      DF %>% select(one_of(varsD[[i]])) %>%
-        mutate(.[,c(1)]/.[,c(2)]) -> varsDiv[[i]]
+      DF %>%
+        select(one_of(varsD[[i]])) %>%
+        mutate(.[, c(1)] / .[, c(2)]) -> varsDiv[[i]]
     }
     varsDiv %>%
       as.data.frame(.) %>%
@@ -502,15 +519,16 @@ StringGen <- function(model_string, media_data, nonmedia_data, Panel, start_date
       str_replace_all(c("\\{" = "", "\\}_Log" = "")) -> varsOD
     DF %>% select(one_of(varsOD)) -> varsNestedLog
     varsNestedLog -> salesunits
-    #salesunits*100 -> salesunits
+    # salesunits*100 -> salesunits
     cbind(varsNestedLog, salesunits) -> varsNestedLog
     names(varsNestedLog) -> varsNestedLogNames
     varsNestedLog <- as.data.frame(varsNestedLog[, !duplicated(colnames(varsNestedLog), fromLast = TRUE)])
     names(varsNestedLog) <- unique(varsNestedLogNames)
     as.data.frame(varsNestedLog) -> varsNestedLog
-    log(varsNestedLog+1) -> varsNestedLog
+    log(varsNestedLog + 1) -> varsNestedLog
     names(varsNestedLog) <- paste("{", names(varsNestedLog), "}_Log", sep = "")
-    cbind(DF, varsNestedLog) -> DF }
+    cbind(DF, varsNestedLog) -> DF
+  }
 
 
   # Subtracting
@@ -519,15 +537,16 @@ StringGen <- function(model_string, media_data, nonmedia_data, Panel, start_date
   } else {
     var.namesM %>%
       str_subset(param14) -> setsS
-    #%>% str_replace_all(c("\\{" = "", "\\}_Log" = "")) -> setsS
+    # %>% str_replace_all(c("\\{" = "", "\\}_Log" = "")) -> setsS
 
     setsS %>%
       str_split(param14, n = Inf) -> varsS
 
     varsSub <- list()
     for (i in 1:length(varsS)) {
-      DF %>% select(one_of(varsS[[i]])) %>%
-        mutate(.[,c(1)] - .[,c(2)]) -> varsSub[[i]]
+      DF %>%
+        select(one_of(varsS[[i]])) %>%
+        mutate(.[, c(1)] - .[, c(2)]) -> varsSub[[i]]
     }
 
     varsSub %>%
@@ -541,96 +560,98 @@ StringGen <- function(model_string, media_data, nonmedia_data, Panel, start_date
     select(Brand, Month, c(1:ncol(DF))) %>%
     filter(Month >= start_date & Month <= end_date) -> DF
 
-  if (sum(str_detect(colnames(DF), pattern = "brand")) > 0) {DF$brand <- NULL} else {DF}
-  if (Panel == 1) {DF$Brand <- NULL} else {DF -> DF}
+  if (sum(str_detect(colnames(DF), pattern = "brand")) > 0) {
+    DF$brand <- NULL
+  } else {
+    DF
+  }
+  if (Panel == 1) {
+    DF$Brand <- NULL
+  } else {
+    DF -> DF
+  }
   return(DF)
 }
 
-CorTestAdR <- function(variable, data, model, modeltable, eMax, rMax, pMax, dMax){
+CorTestAdR <- function(variable, data, model, modeltable, eMax, rMax, pMax, dMax) {
 
-  #determine if data is panel
+  # determine if data is panel
   if (sapply(data[2], class) == "Date") {
 
-    #Select data table and Media Variable put into tdf (Tstat Dataframe)
+    # Select data table and Media Variable put into tdf (Tstat Dataframe)
     colnames(data)[1] -> panel
     colnames(data)[2] -> date
     tdf <- select_(data, panel, date, variable)
-
   } else {
-    #Select data table and Media Variable put into tdf (Tstat Dataframe)
+    # Select data table and Media Variable put into tdf (Tstat Dataframe)
     colnames(data)[1] -> date
     tdf <- select_(data, date, variable)
 
-    #Add constant for panel
+    # Add constant for panel
     tdf$panel <- 100
     tdf <- select_(tdf, "panel", date, variable)
-
   }
 
-  #rename columns for use in AdResponse function
+  # rename columns for use in AdResponse function
   colnames(tdf)[1] <- "DMA"
   colnames(tdf)[2] <- "WeekDate"
 
-  #set parameters for AdResponse Run
-  perams <-  list("EffectiveFrequency" = c(1, eMax, 1), "Recency" = c(1, rMax, 1), "Period" = c(1, pMax/7, 1), "Decay" = c(10, dMax, 10))
+  # set parameters for AdResponse Run
+  perams <- list("EffectiveFrequency" = c(1, eMax, 1), "Recency" = c(1, rMax, 1), "Period" = c(1, pMax / 7, 1), "Decay" = c(10, dMax, 10))
 
 
-  #run Adresponse
-  tdf = calculateAdResponseByDMA(tdf, params = perams)
+  # run Adresponse
+  tdf <- calculateAdResponseByDMA(tdf, params = perams)
   colnames(tdf)[2] <- "Date"
   tdf <- DateConvertMean(tdf)
 
 
-  #filter tdf so it is same length as model table
+  # filter tdf so it is same length as model table
   tdf %>%
     filter(Month >= min(modeltable$Month)) %>%
     filter(Month <= max(modeltable$Month)) -> tdf
 
-  #put resids in tdf
+  # put resids in tdf
   tdf$resid <- model$residuals
 
-  #Create lists for the results of test
+  # Create lists for the results of test
   nameslist <- vector("list", 50000)
   tlist <- vector("list", 50000)
 
-  #run correlation on each var
-  for (i in 3:(length(tdf)-1) ) {
-
-    tlist[[i-2]] <- cor(tdf$resid, tdf[[i]])
-    nameslist[[i-2]] <- colnames(tdf)[i]
-
+  # run correlation on each var
+  for (i in 3:(length(tdf) - 1)) {
+    tlist[[i - 2]] <- cor(tdf$resid, tdf[[i]])
+    nameslist[[i - 2]] <- colnames(tdf)[i]
   }
-  #filter out NAs and turn lists to DFs
+  # filter out NAs and turn lists to DFs
   tlist <- Filter(Negate(is.null), tlist)
   nameslist <- Filter(Negate(is.null), nameslist)
-  Tdata <- do.call(rbind, Map(data.frame, Name=nameslist, Corr=tlist))
+  Tdata <- do.call(rbind, Map(data.frame, Name = nameslist, Corr = tlist))
   Tdata %>% arrange(desc(Corr)) -> CorrTest
   print(head(CorrTest))
   return(CorrTest)
 }
 
-CorTestLag <- function(variable, data, model, modeltable, Log = FALSE, lmax){
+CorTestLag <- function(variable, data, model, modeltable, Log = FALSE, lmax) {
 
-  #determine if data is panel
+  # determine if data is panel
   if (sapply(data[2], class) == "Date") {
 
-    #Select data table and Media Variable put into tdf (Tstat Dataframe)
+    # Select data table and Media Variable put into tdf (Tstat Dataframe)
     colnames(data)[1] -> panel
     colnames(data)[2] -> date
     tdf <- select_(data, panel, date, variable)
-
   } else {
-    #Select data table and Media Variable put into tdf (Tstat Dataframe)
+    # Select data table and Media Variable put into tdf (Tstat Dataframe)
     colnames(data)[1] -> date
     tdf <- select_(data, date, variable)
 
-    #Add constant for panel
+    # Add constant for panel
     tdf$panel <- 100
     tdf <- select_(tdf, "panel", date, variable)
-
   }
 
-  if (Log == TRUE){
+  if (Log == TRUE) {
     tdf[[3]] <- log(tdf[[3]] + 1)
     newvar <- paste(variable, "Log", sep = "_")
     colnames(tdf)[3] <- newvar
@@ -638,43 +659,43 @@ CorTestLag <- function(variable, data, model, modeltable, Log = FALSE, lmax){
   }
 
 
-  #rename columns for use in AdResponse function
+  # rename columns for use in AdResponse function
   colnames(tdf)[1] <- "DMA"
   colnames(tdf)[2] <- "Month"
 
 
   for (i in 1:lmax) {
-    newvar <- paste(variable,"_Lag", i, sep = "")
-    tdf <- slide(tdf, Var = variable, GroupVar = 'DMA',
-                 TimeVar = 'Month', slideBy = -i)
-    colnames(tdf)[i+3] <- newvar
+    newvar <- paste(variable, "_Lag", i, sep = "")
+    tdf <- slide(tdf,
+      Var = variable, GroupVar = "DMA",
+      TimeVar = "Month", slideBy = -i
+    )
+    colnames(tdf)[i + 3] <- newvar
   }
 
-  #filter tdf so it is same length as model table
+  # filter tdf so it is same length as model table
   tdf %>%
     filter(Month >= min(modeltable$Month)) %>%
     filter(Month <= max(modeltable$Month)) -> tdf
 
 
-  #put resids in tdf
+  # put resids in tdf
   tdf$resid <- model$residuals
 
-  #Create lists for the results of test
+  # Create lists for the results of test
   nameslist <- vector("list", 50000)
   tlist <- vector("list", 50000)
 
-  #run correlation on each var
-  for (i in 3:(length(tdf)-1) ) {
+  # run correlation on each var
+  for (i in 3:(length(tdf) - 1)) {
+    tlist[[i - 2]] <- cor(tdf$resid, tdf[[i]], use = "complete.obs")
 
-    tlist[[i-2]] <- cor(tdf$resid, tdf[[i]], use = "complete.obs")
-
-    nameslist[[i-2]] <- colnames(tdf)[i]
-
+    nameslist[[i - 2]] <- colnames(tdf)[i]
   }
-  #filter out NAs and turn lists to DFs
+  # filter out NAs and turn lists to DFs
   tlist <- Filter(Negate(is.null), tlist)
   nameslist <- Filter(Negate(is.null), nameslist)
-  Tdata <- do.call(rbind, Map(data.frame, Name=nameslist, Corr=tlist))
+  Tdata <- do.call(rbind, Map(data.frame, Name = nameslist, Corr = tlist))
   Tdata %>% arrange(desc(Corr)) -> CorrTest
   print(head(CorrTest))
   return(CorrTest)
@@ -682,30 +703,34 @@ CorTestLag <- function(variable, data, model, modeltable, Log = FALSE, lmax){
 
 
 RunModel <- function(Formula, DF, Panel) {
-  Formula <- str_replace_all(Formula,
-                             c("\\<D\\>" = "_D_", "\\<\\*>" = "_M_", "\\{" = "", "\\}" = "", "\\<A\\>" = "_A_", "\\<S\\>" = "_S_"))
+  Formula <- str_replace_all(
+    Formula,
+    c("\\<D\\>" = "_D_", "\\<\\*>" = "_M_", "\\{" = "", "\\}" = "", "\\<A\\>" = "_A_", "\\<S\\>" = "_S_")
+  )
   names(DF) <- str_replace_all(names(DF), c("\\<D\\>" = "_D_", "\\<\\*>" = "_M_", "\\{" = "", "\\}" = "", "\\<A\\>" = "_A_", "\\<S\\>" = "_S_"))
   if (Panel == 1) {
     lm(Formula, DF) -> model
     print(summary(model))
     return(model)
-  }  else {
-    reformulate(response = str_split_fixed(Formula, pattern = " ~ ", n = 2)[1],termlabels = str_split_fixed(Formula, pattern = " ~ ", n = 2)[2]) -> Formula
+  } else {
+    reformulate(response = str_split_fixed(Formula, pattern = " ~ ", n = 2)[1], termlabels = str_split_fixed(Formula, pattern = " ~ ", n = 2)[2]) -> Formula
     plm(Formula, DF, model = "within") -> model
-    #print(summary(model))
+    # print(summary(model))
     return(model)
   }
 }
 
 DW_Vif_Test <- function(Formula, DF, Panel) {
-  Formula <- str_replace_all(Formula,
-                             c("\\<D\\>" = "_D_", "\\<\\*>" = "_M_", "\\{" = "", "\\}" = "", "\\<A\\>" = "_A_", "\\<S\\>" = "_S_"))
+  Formula <- str_replace_all(
+    Formula,
+    c("\\<D\\>" = "_D_", "\\<\\*>" = "_M_", "\\{" = "", "\\}" = "", "\\<A\\>" = "_A_", "\\<S\\>" = "_S_")
+  )
   names(DF) <- str_replace_all(names(DF), c("\\<D\\>" = "_D_", "\\<\\*>" = "_M_", "\\{" = "", "\\}" = "", "\\<A\\>" = "_A_", "\\<S\\>" = "_S_"))
   if (Panel == 1) {
     durbinWatsonTest(model = lm(Formula, DF)) %>% print(.)
     return(model)
-  }  else {
-    reformulate(response = str_split_fixed(Formula, pattern = " ~ ", n = 2)[1],termlabels = str_split_fixed(Formula, pattern = " ~ ", n = 2)[2]) -> Formula
+  } else {
+    reformulate(response = str_split_fixed(Formula, pattern = " ~ ", n = 2)[1], termlabels = str_split_fixed(Formula, pattern = " ~ ", n = 2)[2]) -> Formula
     pdwtest(x = Formula, data = DF, model = "within") %>% print(.)
     vif(plm(Formula, data = DF, model = "pooling")) %>% print(.)
   }
@@ -714,8 +739,9 @@ DW_Vif_Test <- function(Formula, DF, Panel) {
 exportREG <- function(Formula, DF, Panel, model, nameDF) {
   str_split_fixed(Formula, pattern = " ~ ", n = 2)[1] -> KPI
   str_split_fixed(KPI, pattern = "<S>", n = 2)[1] -> KPI1
-    str_split_fixed(KPI1, pattern = "<D>", n = 2)[1] %>%
-    str_replace(pattern = "\\{", replacement = "") %>% str_replace(pattern = "_Log", replacement = "") -> OKPI
+  str_split_fixed(KPI1, pattern = "<D>", n = 2)[1] %>%
+    str_replace(pattern = "\\{", replacement = "") %>%
+    str_replace(pattern = "_Log", replacement = "") -> OKPI
   as.data.frame(DF[, colnames(DF) %in% KPI]) -> KPIVARS
   KPI -> names(KPIVARS)
   as.data.frame(DF[, colnames(DF) %in% OKPI]) -> OKPIVARS
@@ -726,8 +752,8 @@ exportREG <- function(Formula, DF, Panel, model, nameDF) {
 
   if (Panel == 1) {
     cbind(select(DF, Month), OKPIVARS, KPIVARS, VARSCOLS) -> reg_group
-    str_split_fixed(reg_group$Month, pattern = "-", n = 3)[,1] -> reg_group$YEAR
-    str_split_fixed(reg_group$Month, pattern = "-", n = 3)[,2] -> reg_group$MONTH
+    str_split_fixed(reg_group$Month, pattern = "-", n = 3)[, 1] -> reg_group$YEAR
+    str_split_fixed(reg_group$Month, pattern = "-", n = 3)[, 2] -> reg_group$MONTH
     paste0(reg_group$YEAR, "M", reg_group$MONTH) -> reg_group$Month
     reg_group$YEAR <- NULL
     reg_group$MONTH <- NULL
@@ -751,8 +777,8 @@ exportREG <- function(Formula, DF, Panel, model, nameDF) {
     write.csv(coeffs, paste0(nameDF, "_eq.csv"), row.names = FALSE)
   } else {
     cbind(select(DF, Brand, Month), OKPIVARS, KPIVARS, VARSCOLS) -> reg_group
-    str_split_fixed(reg_group$Month, pattern = "-", n = 3)[,1] -> reg_group$YEAR
-    str_split_fixed(reg_group$Month, pattern = "-", n = 3)[,2] -> reg_group$MONTH
+    str_split_fixed(reg_group$Month, pattern = "-", n = 3)[, 1] -> reg_group$YEAR
+    str_split_fixed(reg_group$Month, pattern = "-", n = 3)[, 2] -> reg_group$MONTH
     paste0(reg_group$YEAR, "M", reg_group$MONTH) -> reg_group$Month
     reg_group$YEAR <- NULL
     reg_group$MONTH <- NULL
@@ -787,19 +813,20 @@ ChartResids <- function(DF, KPI, model, panel_name = FALSE) {
   # panel = "ver"
   # individual = TRUE
 
-  if (is.null(DF$Brand)){
+  if (is.null(DF$Brand)) {
     DF$dma_code <- "100"
   } else {
     DF$dma_code <- DF$Brand
   }
 
-  DF <- DF[complete.cases(DF),]
+  DF <- DF[complete.cases(DF), ]
   DF$resid <- model$residuals
   DF$KPI <- DF[, colnames(DF) %in% KPI]
   DF$pred <- DF$KPI - DF$resid
 
   if (panel_name == "all") {
-    DF %>% select(Brand, Month, KPI, pred, resid) %>%
+    DF %>%
+      select(Brand, Month, KPI, pred, resid) %>%
       group_by(Brand, Month) %>%
       summarise(KPI = sum(KPI), pred = sum(pred), resid = sum(resid)) -> tmp1
 
@@ -815,81 +842,81 @@ ChartResids <- function(DF, KPI, model, panel_name = FALSE) {
         geom_line(aes(y = KPI, colour = "Total Sales")) +
         geom_line(aes(y = pred, colour = "Predicted Total Sales")) +
         geom_line(aes(y = resid, colour = "Residual")) +
-        theme(legend.position = "none", plot.title = element_text(size = 10),
-              axis.title.x = element_text(size = 5),
-              axis.title.y = element_text(size = 5)) +
+        theme(
+          legend.position = "none", plot.title = element_text(size = 10),
+          axis.title.x = element_text(size = 5),
+          axis.title.y = element_text(size = 5)
+        ) +
         ggtitle(as.character(i)) -> allp[[i]]
     }
 
     # Find number of rows
-    round((length(brands)/4) + 0.1) -> i
+    round((length(brands) / 4) + 0.1) -> i
 
     # Number of plot spaces
-    round(i)*4 -> grid
+    round(i) * 4 -> grid
     layout <- matrix(c(1:grid), nrow = i, ncol = 4, byrow = TRUE)
     multiplot(plotlist = allp, layout = layout)
   } else {
+    if (panel_name != FALSE) {
+      DF <- filter(DF, dma_code == panel_name)
+    } else {
+      print("View all panel resids: panels aggregated")
+    }
 
-  if (panel_name != FALSE) {
-    DF <- filter(DF, dma_code == panel_name)
-  } else {
-    print("View all panel resids: panels aggregated")
-  }
+    if (panel_name != FALSE) {
+      DF %>% select(dma_code, Month, KPI, pred, resid) -> tmp
+      tmp$zeroline <- 0
 
-  if (panel_name != FALSE) {
-    DF %>% select(dma_code, Month, KPI, pred, resid) -> tmp
-    tmp$zeroline <- 0
+      ungroup(tmp) %>%
+        rename(Year = Month) %>%
+        select(Year, KPI, pred, resid) %>%
+        ggplot(aes(Year)) +
+        geom_line(aes(y = KPI, colour = "Total Sales")) +
+        geom_line(aes(y = pred, colour = "Predicted Total Sales")) +
+        geom_line(aes(y = resid, colour = "Residual")) +
+        theme(legend.position = "bottom")
+      ggplotly()
+    } else {
+      DF %>%
+        select(Month, KPI, pred, resid) %>%
+        group_by(Month) %>%
+        summarise(KPI = sum(KPI), pred = sum(pred), resid = sum(resid)) -> tmp
+      tmp$zeroline <- 0
 
-    ungroup(tmp) %>%
-      rename(Year = Month) %>%
-      select(Year, KPI, pred, resid) %>%
-      ggplot(aes(Year)) +
-      geom_line(aes(y = KPI, colour = "Total Sales")) +
-      geom_line(aes(y = pred, colour = "Predicted Total Sales")) +
-      geom_line(aes(y = resid, colour = "Residual")) +
-      theme(legend.position = "bottom")
-    ggplotly()
-
-  } else {
-    DF %>% select(Month, KPI, pred, resid) %>%
-      group_by(Month) %>%
-      summarise(KPI = sum(KPI), pred = sum(pred), resid = sum(resid)) -> tmp
-    tmp$zeroline <- 0
-
-    ungroup(tmp) %>%
-      rename(Year = Month) %>%
-      select(Year, KPI, pred, resid) %>%
-      ggplot(aes(Year)) +
-      geom_line(aes(y = KPI, colour = "Total Sales")) +
-      geom_line(aes(y = pred, colour = "Predicted Total Sales")) +
-      geom_line(aes(y = resid, colour = "Residual")) +
-      theme(legend.position = "bottom")
-    ggplotly()
-
+      ungroup(tmp) %>%
+        rename(Year = Month) %>%
+        select(Year, KPI, pred, resid) %>%
+        ggplot(aes(Year)) +
+        geom_line(aes(y = KPI, colour = "Total Sales")) +
+        geom_line(aes(y = pred, colour = "Predicted Total Sales")) +
+        geom_line(aes(y = resid, colour = "Residual")) +
+        theme(legend.position = "bottom")
+      ggplotly()
     }
   }
 }
 
-multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+multiplot <- function(..., plotlist = NULL, file, cols = 1, layout = NULL) {
   library(grid)
 
   # Make a list from the ... arguments and plotlist
   plots <- c(list(...), plotlist)
 
-  numPlots = length(plots)
+  numPlots <- length(plots)
 
   # If layout is NULL, then use 'cols' to determine layout
   if (is.null(layout)) {
     # Make the panel
     # ncol: Number of columns of plots
     # nrow: Number of rows needed, calculated from # of cols
-    layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
-                     ncol = cols, nrow = ceiling(numPlots/cols))
+    layout <- matrix(seq(1, cols * ceiling(numPlots / cols)),
+      ncol = cols, nrow = ceiling(numPlots / cols)
+    )
   }
 
-  if (numPlots==1) {
+  if (numPlots == 1) {
     print(plots[[1]])
-
   } else {
     # Set up the page
     grid.newpage()
@@ -900,8 +927,10 @@ multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
       # Get the i,j matrix positions of the regions that contain this subplot
       matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
 
-      print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
-                                      layout.pos.col = matchidx$col))
+      print(plots[[i]], vp = viewport(
+        layout.pos.row = matchidx$row,
+        layout.pos.col = matchidx$col
+      ))
     }
   }
 }
@@ -909,65 +938,76 @@ multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
 
 firstfill <- function(data) {
   if (sum(is.na(data)) > 0) {
-    sum(is.na(data))/2 -> val
+    sum(is.na(data)) / 2 -> val
     first(data[!is.na(data)]) -> min1
     min1 -> data[c(1:val)]
     return(data)
-  } else {return(data)}
+  } else {
+    return(data)
+  }
 }
 lastfill <- function(data) {
   if (sum(is.na(data)) > 0) {
-
     last(data[!is.na(data)]) -> end
     end -> max1
     max1 -> data[is.na(data)]
     return(data)
-  } else {return(data)}
+  } else {
+    return(data)
+  }
 }
 
 
-lm_string_format <- function(x){
+lm_string_format <- function(x) {
   return(str_replace_all(x, c("\\<D\\>" = "_D_", "\\<\\*>" = "_M_", "\\{" = "", "\\}" = "")))
 }
 
-lm_data_headers_format <- function(x){
+lm_data_headers_format <- function(x) {
   names(x) <- str_replace_all(names(x), c("\\<D\\>" = "_D_", "\\<\\*>" = "_M_", "\\{" = "", "\\}" = ""))
   return(x)
 }
 
 is_coeff_negative <- function(x, varname) {
-  map_lgl(x,
-          function(y){
-            if(!any(grepl(varname, y$term))){
-              return(FALSE)
-            }
-            any(y[grepl(varname, y$term), 2] < 0)
-          }) %>%
+  map_lgl(
+    x,
+    function(y) {
+      if (!any(grepl(varname, y$term))) {
+        return(FALSE)
+      }
+      any(y[grepl(varname, y$term), 2] < 0)
+    }
+  ) %>%
     return()
 }
 
 is_significant <- function(x, varname) {
-  map_lgl(x,
-          function(y){
-            if(!any(grepl(varname, y$term))){
-              return(FALSE)
-            }
-            any(y[grepl(varname, y$term), 5] >= 0.05)
-          }) %>%
+  map_lgl(
+    x,
+    function(y) {
+      if (!any(grepl(varname, y$term))) {
+        return(FALSE)
+      }
+      any(y[grepl(varname, y$term), 5] >= 0.05)
+    }
+  ) %>%
     return()
 }
 
-transform_combn <- function(x){
+transform_combn <- function(x) {
   output <- expand.grid(
     unlist(
-      data_apply[[x]], recursive = F, use.names = FALSE)
+      data_apply[[x]],
+      recursive = F, use.names = FALSE
+    )
   ) %>%
-    apply(1, function(x){paste(x, collapse = " + ")})
+    apply(1, function(x) {
+      paste(x, collapse = " + ")
+    })
   return(output)
 }
 
-stacker <- function(group_num){
-  var_combo <- combn(groupings[[group_num]], (length(groupings[[group_num]])-1), simplify)
+stacker <- function(group_num) {
+  var_combo <- combn(groupings[[group_num]], (length(groupings[[group_num]]) - 1), simplify)
   var_combo <- as.data.frame(var_combo)
   var_combo %>%
     gather(model_number, vars, 1:length(var_combo)) %>%
@@ -975,23 +1015,23 @@ stacker <- function(group_num){
   return(var_combo)
 }
 
-createAdStock <- function(data, data_piv, var_name, type){
-
+createAdStock <- function(data, data_piv, var_name, type) {
   ifelse(test = type == "Panel",
-         yes = data %>%
-           bind_cols(select(data_piv, week, brand)) %>%
-           select(week, brand, c(1)) %>%
-           rename(Weeks = week, DMA = brand) -> data,
-         no = data %>%
-           bind_cols(select(data_piv, week)) %>%
-           mutate(brand = 100) %>%
-           select(week, brand, c(1)) %>%
-           rename(Weeks = week, DMA = brand) -> data)
+    yes = data %>%
+      bind_cols(select(data_piv, week, brand)) %>%
+      select(week, brand, c(1)) %>%
+      rename(Weeks = week, DMA = brand) -> data,
+    no = data %>%
+      bind_cols(select(data_piv, week)) %>%
+      mutate(brand = 100) %>%
+      select(week, brand, c(1)) %>%
+      rename(Weeks = week, DMA = brand) -> data
+  )
 
   D <- str_extract(var_name, "([D][0-9][0-9])")
   D <- str_replace(D, "D", "")
   D <- as.integer(D)
-  D <- D/100
+  D <- D / 100
   P <- str_extract(var_name, "([P][0-9])")
   P <- str_replace(P, "P", "")
   P <- as.integer(P)
@@ -1004,14 +1044,14 @@ createAdStock <- function(data, data_piv, var_name, type){
   all <- list()
   alldma <- list()
   allpanel <- list()
-  for (dma in unique(data1[,2])) {
+  for (dma in unique(data1[, 2])) {
     filter(data, DMA == dma) -> d
-    d[,3:ncol(d)] -> d
+    d[, 3:ncol(d)] -> d
     d <- as.matrix(d)
     for (x in 1:ncol(d)) {
       for (p in period) {
         for (i in 1:length(decays)) {
-          rowSums(as.data.frame(embed(c(rep(NA, p), as.numeric(d[,x])), p+1) %*% ((1-decays[i])^seq(0,p,1))), na.rm = F) -> totald[[i]]
+          rowSums(as.data.frame(embed(c(rep(NA, p), as.numeric(d[, x])), p + 1) %*% ((1 - decays[i])^seq(0, p, 1))), na.rm = F) -> totald[[i]]
         }
         totald -> totalp[[p]]
       }
@@ -1024,45 +1064,44 @@ createAdStock <- function(data, data_piv, var_name, type){
   as.data.frame(alldma) -> alldma
 
   for (x in 1:ncol(alldma)) {
-    matrix(unlist(alldma[,x]), nrow = length(unique(data$Weeks))) -> allpanel[[x]]
+    matrix(unlist(alldma[, x]), nrow = length(unique(data$Weeks))) -> allpanel[[x]]
   }
 
   dfs <- lapply(allpanel, data.frame, stringsAsFactors = FALSE)
   bind_rows(dfs) -> dfs
-  names(dfs) <- paste(rep(names, each = length(decays)*length(period)), "_", "D", rep(decays*100, length(period)*length(names)), "P", rep(rep(period, each = length(decays)), length(names)), sep = "")
+  names(dfs) <- paste(rep(names, each = length(decays) * length(period)), "_", "D", rep(decays * 100, length(period) * length(names)), "P", rep(rep(period, each = length(decays)), length(names)), sep = "")
 
   return(dfs)
 }
 
 
-Reach = function(fa, fb, fc, fGRPs) {
+Reach <- function(fa, fb, fc, fGRPs) {
   # Return reach data subject to fitted formula to a value r=a/(1+b*(GRPs/1000)^c)
 
   # fa = Alpha Coefficient in reach model fb = Beta Coefficient in reach model fc = Gamma Coefficient in reach model
   # fGRPs = single data point of GRPs at which to calculate reach
 
-  fReach = as.numeric(fGRPs > 0) * fa/(1 + fb * (fGRPs/1000)^fc)
+  fReach <- as.numeric(fGRPs > 0) * fa / (1 + fb * (fGRPs / 1000)^fc)
   # Return calculated reach value
   return(fReach)
 
   # Example Use of Reach Function (solution=1.222065) test=Reach(0.79,-1,0.5,125)
-
 }
 
-RollingSum = function(afGRPsMat, fDecay, nPeriod) {
+RollingSum <- function(afGRPsMat, fDecay, nPeriod) {
   # Create a rolling sum of an AdStock to a vector of data
 
   # afGRPsMat = matrix (vertical vector) of GRP data fDecay = single data point, decimal decay rate of media nPeriod
   # = integer value of number of observations to sum over
 
-  weights = vector(length=nPeriod)
-  decay = 1 - fDecay
-  for(i in 1:nPeriod){
+  weights <- vector(length = nPeriod)
+  decay <- 1 - fDecay
+  for (i in 1:nPeriod) {
     weights[i] <- decay^(nPeriod - i)
   }
 
-  afRollingSum = roll_sumr(afGRPsMat, weights=weights, normalize=F)
-  afRollingSum[1:nPeriod-1] <- afGRPsMat[1:nPeriod-1]
+  afRollingSum <- roll_sumr(afGRPsMat, weights = weights, normalize = F)
+  afRollingSum[1:nPeriod - 1] <- afGRPsMat[1:nPeriod - 1]
 
   # Return the rolling sum of data
   return(afRollingSum)
@@ -1071,7 +1110,7 @@ RollingSum = function(afGRPsMat, fDecay, nPeriod) {
 }
 
 
-AdStock = function(afGRPsMat, fdecayRate) {
+AdStock <- function(afGRPsMat, fdecayRate) {
   # Generate matrix of AdStocked/Decayed GRPs as a function of input GRPs and decay rate to a value
   # y(t)=y(t-1)*d + x(t)
 
@@ -1079,29 +1118,28 @@ AdStock = function(afGRPsMat, fdecayRate) {
   # fdecayRate = decimal version of decay rate
 
   # Create output matrix base on size of input
-  afAdStockedGRPsMat = matrix(1:nrow(afGRPsMat))
+  afAdStockedGRPsMat <- matrix(1:nrow(afGRPsMat))
 
   # first observations are equal
-  afAdStockedGRPsMat[1, 1] = afGRPsMat[1, 1]
+  afAdStockedGRPsMat[1, 1] <- afGRPsMat[1, 1]
 
   # loop through calculating AdStocked GRPs
-  decay = 1 - fdecayRate
-  value = afGRPsMat[1, 1]
+  decay <- 1 - fdecayRate
+  value <- afGRPsMat[1, 1]
   for (x in 2:nrow(afGRPsMat)) {
-    value = value * decay + afGRPsMat[x, 1]
-    afAdStockedGRPsMat[x, 1] = value
+    value <- value * decay + afGRPsMat[x, 1]
+    afAdStockedGRPsMat[x, 1] <- value
   }
 
   # Return AdStocked GRPs matrix
   return(afAdStockedGRPsMat)
 
   # Example use of AdStock Function test=AdStock(data.matric(GRPs[3]),0.15)
-
 }
-adstock =  compiler::cmpfun(AdStock)
+adstock <- compiler::cmpfun(AdStock)
 
 
-createColumns = function(input, column, params = list()){
+createColumns <- function(input, column, params = list()) {
   #   Create Ad Response Columns
   #
   #   Create reach columns, based upon sequence of parameters.
@@ -1139,137 +1177,139 @@ createColumns = function(input, column, params = list()){
     "Period" = c(2, 6, 1),
     "Decay" = c(20, 20, 10)
   )
-  if(!exists("vars")){
-    vars = matrix(ncol = 10, nrow=3)
+  if (!exists("vars")) {
+    vars <- matrix(ncol = 10, nrow = 3)
   }
   # Import parameters we choose to pass
-  p = modifyList(defaultParams, params)
-  p = lapply(p, function(x){ seq(x[1], x[2], x[3]) })
+  p <- modifyList(defaultParams, params)
+  p <- lapply(p, function(x) {
+    seq(x[1], x[2], x[3])
+  })
 
-  results = list()
-  if((grepl("digital", column) & grepl("t1", column))){
-    for(freq in p[["EffectiveFrequency"]]){
-      for(rec in p[["Recency"]]){
-        if(rec > freq){
-          next;
+  results <- list()
+  if ((grepl("digital", column) & grepl("t1", column))) {
+    for (freq in p[["EffectiveFrequency"]]) {
+      for (rec in p[["Recency"]]) {
+        if (rec > freq) {
+          next
         }
-        for(period in p[["Period"]]){
-          for(d in p[["Decay"]]){
-            decay = d / 100
-            name = sprintf("%s_E%sR%sP%sD%s", column, freq, rec, period*7, decay*100)
-            results[[name]] = adresponse(input, vars_display_t1, freq, rec, period, decay)
+        for (period in p[["Period"]]) {
+          for (d in p[["Decay"]]) {
+            decay <- d / 100
+            name <- sprintf("%s_E%sR%sP%sD%s", column, freq, rec, period * 7, decay * 100)
+            results[[name]] <- adresponse(input, vars_display_t1, freq, rec, period, decay)
           }
         }
       }
     }
   }
-  else if((grepl("digital", column) & grepl("t2", column))) {
-    for(freq in p[["EffectiveFrequency"]]){
-      for(rec in p[["Recency"]]){
-        if(rec > freq){
-          next;
+  else if ((grepl("digital", column) & grepl("t2", column))) {
+    for (freq in p[["EffectiveFrequency"]]) {
+      for (rec in p[["Recency"]]) {
+        if (rec > freq) {
+          next
         }
-        for(period in p[["Period"]]){
-          for(d in p[["Decay"]]){
-            decay = d / 100
-            name = sprintf("%s_E%sR%sP%sD%s", column, freq, rec, period*7, decay*100)
-            results[[name]] = adresponse(input, vars_display_t2, freq, rec, period, decay)
+        for (period in p[["Period"]]) {
+          for (d in p[["Decay"]]) {
+            decay <- d / 100
+            name <- sprintf("%s_E%sR%sP%sD%s", column, freq, rec, period * 7, decay * 100)
+            results[[name]] <- adresponse(input, vars_display_t2, freq, rec, period, decay)
           }
         }
       }
     }
   }
-  else if((grepl("social display", column) & grepl("t1", column))) {
-    for(freq in p[["EffectiveFrequency"]]){
-      for(rec in p[["Recency"]]){
-        if(rec > freq){
-          next;
+  else if ((grepl("social display", column) & grepl("t1", column))) {
+    for (freq in p[["EffectiveFrequency"]]) {
+      for (rec in p[["Recency"]]) {
+        if (rec > freq) {
+          next
         }
-        for(period in p[["Period"]]){
-          for(d in p[["Decay"]]){
-            decay = d / 100
-            name = sprintf("%s_E%sR%sP%sD%s", column, freq, rec, period*7, decay*100)
-            results[[name]] = adresponse(input, vars_display_t1, freq, rec, period, decay)
+        for (period in p[["Period"]]) {
+          for (d in p[["Decay"]]) {
+            decay <- d / 100
+            name <- sprintf("%s_E%sR%sP%sD%s", column, freq, rec, period * 7, decay * 100)
+            results[[name]] <- adresponse(input, vars_display_t1, freq, rec, period, decay)
           }
         }
       }
     }
   }
-  else if((grepl("social display", column) & grepl("t2", column))) {
-    for(freq in p[["EffectiveFrequency"]]){
-      for(rec in p[["Recency"]]){
-        if(rec > freq){
-          next;
+  else if ((grepl("social display", column) & grepl("t2", column))) {
+    for (freq in p[["EffectiveFrequency"]]) {
+      for (rec in p[["Recency"]]) {
+        if (rec > freq) {
+          next
         }
-        for(period in p[["Period"]]){
-          for(d in p[["Decay"]]){
-            decay = d / 100
-            name = sprintf("%s_E%sR%sP%sD%s", column, freq, rec, period*7, decay*100)
-            results[[name]] = adresponse(input, vars_display_t2, freq, rec, period, decay)
+        for (period in p[["Period"]]) {
+          for (d in p[["Decay"]]) {
+            decay <- d / 100
+            name <- sprintf("%s_E%sR%sP%sD%s", column, freq, rec, period * 7, decay * 100)
+            results[[name]] <- adresponse(input, vars_display_t2, freq, rec, period, decay)
           }
         }
       }
     }
   }
-  else if(grepl("addressable", column)){
-    for(freq in p[["EffectiveFrequency"]]){
-      for(rec in p[["Recency"]]){
-        if(rec > freq){
-          next;
+  else if (grepl("addressable", column)) {
+    for (freq in p[["EffectiveFrequency"]]) {
+      for (rec in p[["Recency"]]) {
+        if (rec > freq) {
+          next
         }
-        for(period in p[["Period"]]){
-          for(d in p[["Decay"]]){
-            decay = d / 100
-            name = sprintf("%s_E%sR%sP%sD%s", column, freq, rec, period*7, decay*100)
-            results[[name]] = adresponse(input, vars_addressable, freq, rec, period, decay)
+        for (period in p[["Period"]]) {
+          for (d in p[["Decay"]]) {
+            decay <- d / 100
+            name <- sprintf("%s_E%sR%sP%sD%s", column, freq, rec, period * 7, decay * 100)
+            results[[name]] <- adresponse(input, vars_addressable, freq, rec, period, decay)
           }
         }
       }
     }
   }
-  else if(grepl("streaming", column)){
-    for(freq in p[["EffectiveFrequency"]]){
-      for(rec in p[["Recency"]]){
-        if(rec > freq){
-          next;
+  else if (grepl("streaming", column)) {
+    for (freq in p[["EffectiveFrequency"]]) {
+      for (rec in p[["Recency"]]) {
+        if (rec > freq) {
+          next
         }
-        for(period in p[["Period"]]){
-          for(d in p[["Decay"]]){
-            decay = d / 100
-            name = sprintf("%s_E%sR%sP%sD%s", column, freq, rec, period*7, decay*100)
-            results[[name]] = adresponse(input, vars_streaming, freq, rec, period, decay)
+        for (period in p[["Period"]]) {
+          for (d in p[["Decay"]]) {
+            decay <- d / 100
+            name <- sprintf("%s_E%sR%sP%sD%s", column, freq, rec, period * 7, decay * 100)
+            results[[name]] <- adresponse(input, vars_streaming, freq, rec, period, decay)
           }
         }
       }
     }
   }
-  else if(grepl("social video", column)){
-    for(freq in p[["EffectiveFrequency"]]){
-      for(rec in p[["Recency"]]){
-        if(rec > freq){
-          next;
+  else if (grepl("social video", column)) {
+    for (freq in p[["EffectiveFrequency"]]) {
+      for (rec in p[["Recency"]]) {
+        if (rec > freq) {
+          next
         }
-        for(period in p[["Period"]]){
-          for(d in p[["Decay"]]){
-            decay = d / 100
-            name = sprintf("%s_E%sR%sP%sD%s", column, freq, rec, period*7, decay*100)
-            results[[name]] = adresponse(input, vars_streaming, freq, rec, period, decay)
+        for (period in p[["Period"]]) {
+          for (d in p[["Decay"]]) {
+            decay <- d / 100
+            name <- sprintf("%s_E%sR%sP%sD%s", column, freq, rec, period * 7, decay * 100)
+            results[[name]] <- adresponse(input, vars_streaming, freq, rec, period, decay)
           }
         }
       }
     }
   }
-  else if(!grepl("digital", column) & !grepl("addressable", column) & !grepl("streaming", column)  & !grepl("social", column)){
-    for(freq in p[["EffectiveFrequency"]]){
-      for(rec in p[["Recency"]]){
-        if(rec > freq){
-          next;
+  else if (!grepl("digital", column) & !grepl("addressable", column) & !grepl("streaming", column) & !grepl("social", column)) {
+    for (freq in p[["EffectiveFrequency"]]) {
+      for (rec in p[["Recency"]]) {
+        if (rec > freq) {
+          next
         }
-        for(period in p[["Period"]]){
-          for(d in p[["Decay"]]){
-            decay = d / 100
-            name = sprintf("%s_E%sR%sP%sD%s", column, freq, rec, period*7, decay*100)
-            results[[name]] = adresponse(input, vars, freq, rec, period, decay)
+        for (period in p[["Period"]]) {
+          for (d in p[["Decay"]]) {
+            decay <- d / 100
+            name <- sprintf("%s_E%sR%sP%sD%s", column, freq, rec, period * 7, decay * 100)
+            results[[name]] <- adresponse(input, vars, freq, rec, period, decay)
           }
         }
       }
@@ -1278,7 +1318,7 @@ createColumns = function(input, column, params = list()){
   return(as.data.frame(results))
 }
 
-AdResponse = function(afGRPsMat, afCoeffsMat, nEffFreq, nRecFreq, nPeriod, fDecay) {
+AdResponse <- function(afGRPsMat, afCoeffsMat, nEffFreq, nRecFreq, nPeriod, fDecay) {
 
   # Generate the Effective Cover of a vector of input GRPs
 
@@ -1290,36 +1330,36 @@ AdResponse = function(afGRPsMat, afCoeffsMat, nEffFreq, nRecFreq, nPeriod, fDeca
   # fDecay = decimal value of decay rate parameter
 
   # Define output matrix size
-  afGRPsMat = as.matrix(afGRPsMat)
-  afAdResponse = matrix(1:nrow(afGRPsMat))
-  fEffGRPs = RollingSum(afGRPsMat, fDecay, nPeriod)
-  fTotalEffGRPs = adstock(afGRPsMat, fDecay)
+  afGRPsMat <- as.matrix(afGRPsMat)
+  afAdResponse <- matrix(1:nrow(afGRPsMat))
+  fEffGRPs <- RollingSum(afGRPsMat, fDecay, nPeriod)
+  fTotalEffGRPs <- adstock(afGRPsMat, fDecay)
 
-  a = afCoeffsMat[[1, nEffFreq]]
-  b = afCoeffsMat[[2, nEffFreq]]
-  c = afCoeffsMat[[3, nEffFreq]]
+  a <- afCoeffsMat[[1, nEffFreq]]
+  b <- afCoeffsMat[[2, nEffFreq]]
+  c <- afCoeffsMat[[3, nEffFreq]]
 
-  if(nRecFreq == 0){
-    afAdResponse[,1] = Reach(a, b, c, fTotalEffGRPs)
-    return(afAdResponse);
+  if (nRecFreq == 0) {
+    afAdResponse[, 1] <- Reach(a, b, c, fTotalEffGRPs)
+    return(afAdResponse)
   }
 
-  if(nRecFreq == nEffFreq){
-    afAdResponse[,1] = Reach(a, b, c, fEffGRPs)
-    return(afAdResponse);
+  if (nRecFreq == nEffFreq) {
+    afAdResponse[, 1] <- Reach(a, b, c, fEffGRPs)
+    return(afAdResponse)
   }
 
-  fTotalEffGRPs_rounded = round(fTotalEffGRPs[, 1], digits = 6)
-  fEffGRPs_rounded = round(fEffGRPs[, 1], digits = 6)
-  a_s = afCoeffsMat[1,]
-  b_s = afCoeffsMat[2,]
-  c_s = afCoeffsMat[3,]
-  f = matrix(0, nrow=nrow(afGRPsMat), ncol=1)
+  fTotalEffGRPs_rounded <- round(fTotalEffGRPs[, 1], digits = 6)
+  fEffGRPs_rounded <- round(fEffGRPs[, 1], digits = 6)
+  a_s <- afCoeffsMat[1, ]
+  b_s <- afCoeffsMat[2, ]
+  c_s <- afCoeffsMat[3, ]
+  f <- matrix(0, nrow = nrow(afGRPsMat), ncol = 1)
   for (k in nRecFreq:(nEffFreq - 1)) {
-    one = Reach(a_s[[k]], b_s[[k]], c_s[[k]], fEffGRPs)
-    two = Reach(a_s[[k + 1]], b_s[[k + 1]], c_s[[k + 1]], fEffGRPs)
-    three = Reach(a_s[[nEffFreq - k]], b_s[[nEffFreq - k]], c_s[[nEffFreq - k]], fTotalEffGRPs - fEffGRPs)
-    f = f + (one-two)*three/100
+    one <- Reach(a_s[[k]], b_s[[k]], c_s[[k]], fEffGRPs)
+    two <- Reach(a_s[[k + 1]], b_s[[k + 1]], c_s[[k + 1]], fEffGRPs)
+    three <- Reach(a_s[[nEffFreq - k]], b_s[[nEffFreq - k]], c_s[[nEffFreq - k]], fTotalEffGRPs - fEffGRPs)
+    f <- f + (one - two) * three / 100
   }
 
 
@@ -1327,10 +1367,10 @@ AdResponse = function(afGRPsMat, afCoeffsMat, nEffFreq, nRecFreq, nPeriod, fDeca
     # Calculate the x+y(<x) Model
     if (fTotalEffGRPs_rounded[i] == fEffGRPs_rounded[i]) {
       # There is no extra history outside of the recency window
-      afAdResponse[i ,1] = Reach(a, b, c, fEffGRPs[i, 1])
+      afAdResponse[i, 1] <- Reach(a, b, c, fEffGRPs[i, 1])
     } else {
       # There is extra history outside of the recency window to be considered
-      afAdResponse[i, 1] = f[i, 1] + Reach(a, b, c, fEffGRPs[i, 1])
+      afAdResponse[i, 1] <- f[i, 1] + Reach(a, b, c, fEffGRPs[i, 1])
     }
   }
 
@@ -1340,19 +1380,20 @@ AdResponse = function(afGRPsMat, afCoeffsMat, nEffFreq, nRecFreq, nPeriod, fDeca
   # example use of function test=AdResponse(afGRPs, afCoeffs, 5, 1, 2, 0.25)
 }
 
-adresponse = compiler::cmpfun(AdResponse)
+adresponse <- compiler::cmpfun(AdResponse)
 
-createAdR = function(data, data_piv, var_name, type){
+createAdR <- function(data, data_piv, var_name, type) {
   ifelse(test = type == "Panel",
-         yes = data %>%
-           bind_cols(select(data_piv, week, brand)) %>%
-           select(week, brand, c(1)) %>%
-           rename(WeekDate = week, DMA = brand) -> data,
-         no = data %>%
-           bind_cols(select(data_piv, week)) %>%
-           mutate(brand = 100) %>%
-           select(week, brand, c(1)) %>%
-           rename(WeekDate = week, DMA = brand) -> data)
+    yes = data %>%
+      bind_cols(select(data_piv, week, brand)) %>%
+      select(week, brand, c(1)) %>%
+      rename(WeekDate = week, DMA = brand) -> data,
+    no = data %>%
+      bind_cols(select(data_piv, week)) %>%
+      mutate(brand = 100) %>%
+      select(week, brand, c(1)) %>%
+      rename(WeekDate = week, DMA = brand) -> data
+  )
 
   e <- str_extract(var_name, "([E][0-9])")
   e <- str_replace(e, "E", "")
@@ -1363,43 +1404,43 @@ createAdR = function(data, data_piv, var_name, type){
   p <- str_extract(var_name, "[P][0-9][0-9]")
   p <- str_replace(p, "P", "")
   p <- as.integer(p)
-  p <- p/7
+  p <- p / 7
   p <- as.integer(p)
   d <- str_extract(var_name, "[D][0-9][0-9]")
   d <- str_replace(d, "D", "")
   d <- as.numeric(d)
-  params <- list( "EffectiveFrequency" = c(e, e, 1), "Recency" = c(r, r, 1), "Period" = c(p, p, 1), "Decay" = c(d, d, 1))
-  cmp_createColumns = compiler::cmpfun(createColumns)
+  params <- list("EffectiveFrequency" = c(e, e, 1), "Recency" = c(r, r, 1), "Period" = c(p, p, 1), "Decay" = c(d, d, 1))
+  cmp_createColumns <- compiler::cmpfun(createColumns)
   data$date <- as.Date(data$WeekDate, format = "%Y-%m-%d UTC")
 
   # Ensure data is in correct order
   data %>%
     arrange(DMA, date) ->
-    data
+  data
 
-  results = list()
+  results <- list()
 
-  for(dma in unique(data$DMA)) {
+  for (dma in unique(data$DMA)) {
     data %>%
       filter(DMA == dma) ->
-      tmp
+    tmp
 
-    c = list()
-    c[['DMA']] = data.frame("DMA" = rep(dma, nrow(tmp)))
-    c[['date']] = data.frame("Date" = tmp$date)
+    c <- list()
+    c[["DMA"]] <- data.frame("DMA" = rep(dma, nrow(tmp)))
+    c[["date"]] <- data.frame("Date" = tmp$date)
     # Produce list of columns
-    ns = names(data)[-grep("DMA|WeekDate|date", names(data))]
+    ns <- names(data)[-grep("DMA|WeekDate|date", names(data))]
     col_indexes <- 1
-    for(column in ns[col_indexes]){
-      c[[column]] = tmp[column]
-      start = Sys.time()
-      c[[sprintf("%s_exploded", column)]] = createColumns(tmp[column], column, params)
-      end = Sys.time()
-      print(sprintf("%s - %s: %s", dma, column, end-start))
+    for (column in ns[col_indexes]) {
+      c[[column]] <- tmp[column]
+      start <- Sys.time()
+      c[[sprintf("%s_exploded", column)]] <- createColumns(tmp[column], column, params)
+      end <- Sys.time()
+      print(sprintf("%s - %s: %s", dma, column, end - start))
     }
     results[[dma]] <- bind_cols(c)
   }
-  k = bind_rows(results)
+  k <- bind_rows(results)
   k %>% select(c(ncol(.))) -> k
   # ifelse(test = type == "Panel",
   #        yes = k %>% select(DMA, Date, c(ncol(k))) %>% rename(brand = DMA) -> k,
@@ -1408,64 +1449,64 @@ createAdR = function(data, data_piv, var_name, type){
 }
 
 
-reprow <- function(x,n){
-  matrix(rep(x,each = n),nrow = n)
+reprow <- function(x, n) {
+  matrix(rep(x, each = n), nrow = n)
 }
 
 
-repcol <- function(x,n){
-  matrix(rep(x,each = n), ncol = n, byrow = TRUE)
+repcol <- function(x, n) {
+  matrix(rep(x, each = n), ncol = n, byrow = TRUE)
 }
 
-chart_var_resid <- function(kpi, var, modelname, numPanels, kpiDataset, varDataset){
-
-
+chart_var_resid <- function(kpi, var, modelname, numPanels, kpiDataset, varDataset) {
   teststring <- paste(kpi, "~", var)
   chartDF <- StringGen(teststring, media_data = varDataset, nonmedia_data = kpiDataset, Panel = numPanels)
   chartDF$resid <- modelname$resid
-  chartDF[[var]] <- chartDF[[var]]/mean(chartDF[[var]])-1
+  chartDF[[var]] <- chartDF[[var]] / mean(chartDF[[var]]) - 1
 
 
-  if(numPanels > 1){
-    chartDF[,c("Brand","Month", var, "resid")] %>%
+  if (numPanels > 1) {
+    chartDF[, c("Brand", "Month", var, "resid")] %>%
       gather(Type, Val, 3:4) %>%
       ggplot(aes(Month, Val, color = Type)) +
-      facet_wrap(~Brand, ncol=NULL, scales="fixed") +
+      facet_wrap(~Brand, ncol = NULL, scales = "fixed") +
       geom_line() +
       scale_y_continuous("Residuals")
     ggplotly()
-  } else{
-    chartDF[,c("Month", var, "resid")] %>%
+  } else {
+    chartDF[, c("Month", var, "resid")] %>%
       gather(Type, Val, 2:3) %>%
       ggplot(aes(Month, Val, color = Type)) +
       geom_line() +
       scale_y_continuous("Residuals")
     ggplotly()
   }
-
 }
 
 OutResidDMA <- function(DF, model) {
   DFO <- DF
-  DF1 <- DF[,1:2]
+  DF1 <- DF[, 1:2]
   DF$dma_code <- DF$Brand
-  DF <- DF[complete.cases(DF),]
+  DF <- DF[complete.cases(DF), ]
   DF$resid <- model$residuals
   SD <- select(DF, dma_code, Month, resid)
   SD_piv <- dcast(SD, Month ~ dma_code, fun.aggregate = sum, value.var = "resid")
   all_sd <- list()
   for (i in 1:(ncol(SD_piv) - 1)) {
-    SD1 <- SD_piv[,2:ncol(SD_piv)]
-    all_sd[i] <- sd(SD1[,i])
+    SD1 <- SD_piv[, 2:ncol(SD_piv)]
+    all_sd[i] <- sd(SD1[, i])
   }
   all_sd <- cbind(DF$dma_code %>% unique(.), all_sd)
   all_sd <- as.data.frame(matrix(unlist(all_sd), nrow = length(unique(DF$dma_code))))
-  all_sd <- all_sd %>% mutate(dma_code = as.character(V1), residSD = as.double(as.character(V2))) %>% select(dma_code, residSD)
+  all_sd <- all_sd %>%
+    mutate(dma_code = as.character(V1), residSD = as.double(as.character(V2))) %>%
+    select(dma_code, residSD)
   all_sd <- left_join(all_sd, SD, by = c("dma_code" = "dma_code"))
   residuals1 <- list()
   for (i in 1:nrow(all_sd)) {
     if (all_sd[i, 4] >= all_sd[i, 2]) {
-      residuals1[i] <- 1}
+      residuals1[i] <- 1
+    }
     else if (all_sd[i, 4] <= -all_sd[i, 2]) {
       residuals1[i] <- -1
     }
@@ -1474,14 +1515,14 @@ OutResidDMA <- function(DF, model) {
     }
   }
   residuals1 <- t(as.data.frame(residuals1))
-  residuals1 <- cbind(DF[,1:2], residuals1)
+  residuals1 <- cbind(DF[, 1:2], residuals1)
   names(residuals1)[3] <- "residualdum_dma"
   residuals1 <- left_join(DF1, residuals1)
-  residuals1 <- cbind(residuals1, DFO[,3:ncol(DFO)])
+  residuals1 <- cbind(residuals1, DFO[, 3:ncol(DFO)])
   return(residuals1)
 }
 
-ReachCurveCalc <- function(Values, input){
+ReachCurveCalc <- function(Values, input) {
   # Look up for EF/RF parameters and
   gather(fit, Param, Reach, 2:ncol(fit)) -> lookup
   gather(fit_displayt1, Param, Reach, 2:ncol(fit)) -> lookup_dt1
@@ -1497,59 +1538,59 @@ ReachCurveCalc <- function(Values, input){
     if (names(input[col]) == "R") {
 
       # Store Relevant Input Values
-      as.integer(input[1,col]) -> spend
-      as.integer(input[2,col]) -> contribution
-      as.integer(input[4,col]) -> EF
-      as.integer(input[5,col]) -> RF
-      as.integer(input[6,col]) -> Period
-      as.integer(input[7,col]) -> Decay
-      as.character(input[11,col]) -> Channel
+      as.integer(input[1, col]) -> spend
+      as.integer(input[2, col]) -> contribution
+      as.integer(input[4, col]) -> EF
+      as.integer(input[5, col]) -> RF
+      as.integer(input[6, col]) -> Period
+      as.integer(input[7, col]) -> Decay
+      as.character(input[11, col]) -> Channel
 
-      if((grepl("DIGITAL", Channel) & grepl("T1", Channel))){
+      if ((grepl("DIGITAL", Channel) & grepl("T1", Channel))) {
         Alpha <- createABG(lookup_dt1, "A")
         Beta <- createABG(lookup_dt1, "B")
         Gamma <- createABG(lookup_dt1, "C")
-      }else if((grepl("SOCIAL DISPLAY", Channel) & grepl("T1", Channel))){
+      } else if ((grepl("SOCIAL DISPLAY", Channel) & grepl("T1", Channel))) {
         Alpha <- createABG(lookup_dt1, "A")
         Beta <- createABG(lookup_dt1, "B")
         Gamma <- createABG(lookup_dt1, "C")
       }
-      else if((grepl("SOCIAL DISPLAY", Channel) & grepl("T2", Channel))){
+      else if ((grepl("SOCIAL DISPLAY", Channel) & grepl("T2", Channel))) {
         Alpha <- createABG(lookup_dt2, "A")
         Beta <- createABG(lookup_dt2, "B")
         Gamma <- createABG(lookup_dt2, "C")
       }
-      else if((grepl("DIGITAL", Channel) & grepl("T2", Channel))){
+      else if ((grepl("DIGITAL", Channel) & grepl("T2", Channel))) {
         Alpha <- createABG(lookup_dt2, "A")
         Beta <- createABG(lookup_dt2, "B")
         Gamma <- createABG(lookup_dt2, "C")
-      }else if(grepl("STREAMING", Channel)){
+      } else if (grepl("STREAMING", Channel)) {
         Alpha <- createABG(lookup_st, "A")
         Beta <- createABG(lookup_st, "B")
         Gamma <- createABG(lookup_st, "C")
       }
-      else if(grepl("SOCIAL VIDEO", Channel)){
+      else if (grepl("SOCIAL VIDEO", Channel)) {
         Alpha <- createABG(lookup_st, "A")
         Beta <- createABG(lookup_st, "B")
         Gamma <- createABG(lookup_st, "C")
-      }else if(grepl("ADDRESSABLE", Channel)){
+      } else if (grepl("ADDRESSABLE", Channel)) {
         Alpha <- createABG(lookup_ad, "A")
         Beta <- createABG(lookup_ad, "B")
         Gamma <- createABG(lookup_ad, "C")
-      }else if(!grepl("STREAMING", Channel) & !grepl("ADDRESSABLE", Channel) & !grepl("DIGITAL", Channel) & !grepl("SOCIAL", Channel)){
+      } else if (!grepl("STREAMING", Channel) & !grepl("ADDRESSABLE", Channel) & !grepl("DIGITAL", Channel) & !grepl("SOCIAL", Channel)) {
         Alpha <- createABG(lookup, "A")
         Beta <- createABG(lookup, "B")
         Gamma <- createABG(lookup, "C")
       }
 
 
-      Decay/100 -> Decay
+      Decay / 100 -> Decay
       Values[1:104, col] -> gaGRPs
       104 -> gnObs
       for (t in 1:1) {
         # Repeat GRPs
-        gaGRPs[1:52,t] -> YagoGRPs
-        gaGRPs[53:104,t] -> CYGRPs
+        gaGRPs[1:52, t] -> YagoGRPs
+        gaGRPs[53:104, t] -> CYGRPs
         reprow(YagoGRPs, 101) -> YagoGRPs
         reprow(CYGRPs, 101) -> CYGRPs
         matrix(unlist(YagoGRPs), nrow = 52, byrow = FALSE) -> YagoGRPs
@@ -1570,13 +1611,13 @@ ReachCurveCalc <- function(Values, input){
         for (x in 1:ncol(total)) {
           for (i in Period:gnObs) {
             # Calculate the Effective GRPs
-            fEffGRPs = 0
-            fTotEffGRPs = 0
+            fEffGRPs <- 0
+            fTotEffGRPs <- 0
             for (j in 1:i) {
               if (j <= Period) {
-                fEffGRPs <- fEffGRPs + total[i - j + 1, x][[1]] * (1 - Decay) ^ (j - 1)
+                fEffGRPs <- fEffGRPs + total[i - j + 1, x][[1]] * (1 - Decay)^(j - 1)
               }
-              fTotEffGRPs <- fTotEffGRPs + total[i - j + 1, x][[1]] * (1 - Decay) ^ (j - 1)
+              fTotEffGRPs <- fTotEffGRPs + total[i - j + 1, x][[1]] * (1 - Decay)^(j - 1)
             }
             # Calculate response function
             # if(grepl("DIGITAL", Channel) & grepl("T1", Channel)){
@@ -1627,18 +1668,18 @@ ReachCurveCalc <- function(Values, input){
         # print(end - start)
 
         matrix(unlist(totaladresponse), nrow = 104, byrow = FALSE) -> TotalAdResponse
-        colSums((TotalAdResponse)[53:nrow(TotalAdResponse),1:ncol(TotalAdResponse)]) -> VarReach
+        colSums((TotalAdResponse)[53:nrow(TotalAdResponse), 1:ncol(TotalAdResponse)]) -> VarReach
         VarReach - VarReach[[1]] -> VarReach
 
         # Find contributions through % of VarReach
         as.data.frame(VarReach) -> VarReach
-        rbind(0,VarReach) -> VarReach1
-        VarReach1[1:101,] -> VarReach1
+        rbind(0, VarReach) -> VarReach1
+        VarReach1[1:101, ] -> VarReach1
 
-        VarReach1/VarReach -> ContrPer
-        as.data.frame(ContrPer[1:21,]) -> ContrPer
-        VarReach/VarReach1 -> ContrPer1
-        as.data.frame(ContrPer1[22:101,]) -> ContrPer1
+        VarReach1 / VarReach -> ContrPer
+        as.data.frame(ContrPer[1:21, ]) -> ContrPer
+        VarReach / VarReach1 -> ContrPer1
+        as.data.frame(ContrPer1[22:101, ]) -> ContrPer1
         names(ContrPer) <- "Percent"
         names(ContrPer1) <- "Percent"
 
@@ -1648,15 +1689,15 @@ ReachCurveCalc <- function(Values, input){
         ContrPer$Contribution[[21]] <- contribution
 
         for (x in 21:1) {
-          ContrPer$Percent[[x]]*ContrPer$Contribution[[x]] -> ContrPer$Contribution[x - 1]
+          ContrPer$Percent[[x]] * ContrPer$Contribution[[x]] -> ContrPer$Contribution[x - 1]
         }
 
         for (x in 22:nrow(ContrPer)) {
-          ContrPer$Percent[[x]]*ContrPer$Contribution[x - 1] -> ContrPer$Contribution[x]
+          ContrPer$Percent[[x]] * ContrPer$Contribution[x - 1] -> ContrPer$Contribution[x]
         }
 
         # Calculate Spend
-        t(Per*spend) -> Spend
+        t(Per * spend) -> Spend
         cbind(Spend, VarReach, ContrPer$Contribution) -> Final
         names(Final) <- c("Spend", "Reach", "Contribution")
         list(Final) -> test
@@ -1664,7 +1705,6 @@ ReachCurveCalc <- function(Values, input){
       }
       test -> AllReach[[col]]
     } else if (names(input[col]) == "L") {
-
       gnObs <- nrow(Values)
       contribution <- as.integer(input[2, (col)])
       spend <- as.integer(input[1, (col)])
@@ -1678,7 +1718,7 @@ ReachCurveCalc <- function(Values, input){
         if (aInd == 1) {
           LayDown[aInd] <- aInd
         } else {
-          LayDown[aInd] <-  (1 - decay) ^ (aInd - 1)
+          LayDown[aInd] <- (1 - decay)^(aInd - 1)
         }
       }
       # Repeat GRPs
@@ -1707,10 +1747,10 @@ ReachCurveCalc <- function(Values, input){
       for (i in 1:ncol(total)) {
         cInd <- 0
         Output <- matrix(0, nrow = 104, ncol = 1)
-        CalcStg <- as.data.frame(outer(as.matrix(total[,i]), as.matrix(LayDown)))
+        CalcStg <- as.data.frame(outer(as.matrix(total[, i]), as.matrix(LayDown)))
         for (aInd in 1:nrow(total)) {
           for (bInd in 1:period) {
-            cInd = aInd + bInd - 1
+            cInd <- aInd + bInd - 1
             if (cInd <= gnObs) {
               Output[cInd] <- Output[cInd] + CalcStg[aInd, bInd]
             }
@@ -1723,18 +1763,18 @@ ReachCurveCalc <- function(Values, input){
       matrix(unlist(FinalAll), nrow = 104, ncol = 101) -> total1
 
 
-      colSums((total1)[53:nrow(total1),1:ncol(total1)]) -> VarReach
+      colSums((total1)[53:nrow(total1), 1:ncol(total1)]) -> VarReach
       VarReach - VarReach[[1]] -> VarReach
 
       # Find contributions through % of VarReach
       as.data.frame(VarReach) -> VarReach
-      rbind(0,VarReach) -> VarReach1
-      VarReach1[1:101,] -> VarReach1
+      rbind(0, VarReach) -> VarReach1
+      VarReach1[1:101, ] -> VarReach1
 
-      VarReach1/VarReach -> ContrPer
-      as.data.frame(ContrPer[1:21,]) -> ContrPer
-      VarReach/VarReach1 -> ContrPer1
-      as.data.frame(ContrPer1[22:101,]) -> ContrPer1
+      VarReach1 / VarReach -> ContrPer
+      as.data.frame(ContrPer[1:21, ]) -> ContrPer
+      VarReach / VarReach1 -> ContrPer1
+      as.data.frame(ContrPer1[22:101, ]) -> ContrPer1
       names(ContrPer) <- "Percent"
       names(ContrPer1) <- "Percent"
 
@@ -1744,33 +1784,34 @@ ReachCurveCalc <- function(Values, input){
       ContrPer$Contribution[[21]] <- contribution
 
       for (x in 21:1) {
-        ContrPer$Percent[[x]]*ContrPer$Contribution[[x]] -> ContrPer$Contribution[x - 1]
+        ContrPer$Percent[[x]] * ContrPer$Contribution[[x]] -> ContrPer$Contribution[x - 1]
       }
 
       for (x in 22:nrow(ContrPer)) {
-        ContrPer$Percent[[x]]*ContrPer$Contribution[x - 1] -> ContrPer$Contribution[x]
+        ContrPer$Percent[[x]] * ContrPer$Contribution[x - 1] -> ContrPer$Contribution[x]
       }
 
       # Calculate Spend
-      t(Per*spend) -> Spend
+      t(Per * spend) -> Spend
       cbind(Spend, VarReach, ContrPer$Contribution) -> Final
       names(Final) <- c("Spend", "Reach", "Contribution")
       list(Final) -> Final
       Final -> AllReach[[col]]
       print(paste(names(Values)[col], "done"))
-    } else {print("Please select whether you are inputting a Adresponse or Adstock variable.")
+    } else {
+      print("Please select whether you are inputting a Adresponse or Adstock variable.")
     }
   }
   data.frame(matrix(unlist(AllReach), nrow = 101, byrow = FALSE)) -> AllReach
   # Name the reach curves
   names(Values)[-1] -> names
-  rep(names, each = 3 ) -> names
+  rep(names, each = 3) -> names
 
   matrix(names, ncol = 3, byrow = TRUE) -> testing
   as.data.frame(testing) -> names1
-  paste(testing[,1], "Spend", sep = " ") -> names1$Spend
-  paste(testing[,2], "Reach", sep = " ") -> names1$Reach
-  paste(testing[,3], "Contribution", sep = " ") -> names1$Contribution
+  paste(testing[, 1], "Spend", sep = " ") -> names1$Spend
+  paste(testing[, 2], "Reach", sep = " ") -> names1$Reach
+  paste(testing[, 3], "Contribution", sep = " ") -> names1$Contribution
   select(names1, Spend:Contribution) -> names1
   as.matrix(t(names1)) -> names1
   as.vector(names1) -> names1
@@ -2048,7 +2089,3 @@ ReachCurveCalc <- function(Values, input){
 #   row.names(ABCs) <- NULL
 #   return(ABCs)
 # }
-
-
-
-
