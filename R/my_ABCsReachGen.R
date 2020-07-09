@@ -19,7 +19,7 @@ ABCsReachGen <- function(Contrib,
     gather("Year", "Contributions", 5:ncol(.)) %>%
     filter(Year == year) %>%
     group_by(variable, Categories, Model, Year) %>%
-    summarise(Contributions = sum(Contributions)) %>%
+    summarise(Contributions = sum(Contributions, na.rm = TRUE)) %>%
     mutate(TMP = 1) %>%
     filter(grepl("_([E][0-9][R][0-9][P][0-9][0-9][D][0-9][0-9])", variable) | grepl("_([D][0-9][0-9][P][0-9])", variable)) %>%
     arrange(variable) %>%
@@ -79,7 +79,7 @@ ABCsReachGen <- function(Contrib,
   AllData <- gather(AllData, "Category", "Value", 3:ncol(AllData))
 
   DataJoin <- left_join(Contrib1[, c("variable", "Categories", "Model", "LU")], AllData, by = c("LU" = "Category"))
-  Data <- dcast(DataJoin, week ~ Model + variable, fun.aggregate = sum, value.var = "Value")
+  Data <- dcast(DataJoin, week ~ Model + variable, fun.aggregate = function(x) sum(x, na.rm = TRUE), value.var = "Value")
 
   # 104 Weeks
   Data <- left_join(timeframe, Data)
@@ -210,13 +210,13 @@ ABCsReachGen <- function(Contrib,
     left_join(select(Contrib1, Categories, TableName), AllReach1, c("TableName" = "TableName")) %>%
     spread(Category, Value) %>%
     group_by(Categories, Percent) %>%
-    summarise(Contribution = sum(Contribution, na.rm = TRUE), Spend = mean(Spend), Reach = mean(Reach)) %>%
+    summarise(Contribution = sum(Contribution, na.rm = TRUE), Spend = mean(Spend, na.rm = TRUE), Reach = mean(Reach, na.rm = TRUE)) %>%
     gather("Category", "Value", 3:5) %>%
     arrange(desc(Category)) %>%
     filter(Categories != "TV COMP")
 
   # Start ABCs
-  AllReach3 <- dcast(AllReach2, Percent ~ Categories + Category, fun.aggregate = sum, value.var = "Value")
+  AllReach3 <- dcast(AllReach2, Percent ~ Categories + Category, fun.aggregate = function(x) sum(x, na.rm = TRUE), value.var = "Value")
   # AllReach3[c(1:101),] -> AllReach3
   AllReach3$Percent <- NULL
 
