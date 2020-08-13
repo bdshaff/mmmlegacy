@@ -185,23 +185,23 @@ StringGen <- function(model_string, media_data, nonmedia_data, Panel, start_date
     filter(Month >= start_date & Month <= end_date) -> OKData
 
   # Bind all three dataframe into one
-  cbind(as.data.frame(OKData), as.data.frame(ADDataT), as.data.frame(ASDataT)) -> DF
+  # cbind(as.data.frame(OKData), as.data.frame(ADDataT), as.data.frame(ASDataT)) -> DF
+  DF <- cbind(as.data.frame(OKData), as.data.frame(ADDataT))
   DF <- DF[, !duplicated(colnames(DF), fromLast = TRUE)] # Delete duplicates (DMA and Month columns)
   DF <- DF[, colSums(is.na(DF)) != nrow(DF)] # Delete NAs if not all three dataframes have data
-  DF %>%
+  DF <- DF %>%
     select(DMA, Month, c(1:ncol(DF))) %>%
-    rename(Brand = DMA) -> DF
+    rename(Brand = DMA)
 
   # Lag Data
   if (length(str_subset(var.names, param4)) == 0) {
     DF -> DF
   } else {
-    var.names %>%
-      str_subset(param4) -> lagvarsparams
-    as.integer(str_split_fixed(lagvarsparams, pattern = "_Lag", n = 2)[, 2]) -> lagparams
-    lagvarsparams %>% str_replace_all(., c("_Lag[0-9]" = "")) -> lagvars
-    select(DF, one_of(lagvars)) -> lagvariables
-    bind_cols(select(DF, Month, Brand), lagvariables) -> lagvariables
+    lagvarsparams <- var.names %>% str_subset(param4)
+    lagparams <- as.integer(str_split_fixed(lagvarsparams, pattern = "_Lag", n = 2)[, 2])
+    lagvars <- lagvarsparams %>% str_replace_all(., c("_Lag[0-9]" = ""))
+    lagvariables <- select(DF, one_of(lagvars))
+    lagvariables <- bind_cols(select(DF, Month, Brand), lagvariables)
 
     testlag <- list()
     for (i in 3:ncol(lagvariables)) {
@@ -210,7 +210,9 @@ StringGen <- function(model_string, media_data, nonmedia_data, Panel, start_date
         TimeVar = names(lagvariables[1]), slideBy = -(lagparams[i - 2])
       ) -> testlag[[i]]
     }
-    bind_cols(testlag) -> testlag
+    testlag <- testlag %>%
+      discard(is.null) %>%
+      reduce(left_join)
     testlag <- testlag[, !duplicated(colnames(testlag), fromLast = TRUE)]
     names(testlag) <- str_replace_all(names(testlag), pattern = "-", replacement = "_Lag")
     testlag <- cbind(select(testlag, Month, Brand), select(testlag, matches(c(".Lag."))))
@@ -570,7 +572,6 @@ StringGen <- function(model_string, media_data, nonmedia_data, Panel, start_date
   } else {
     DF -> DF
   }
-  return(DF)
 }
 
 CorTestAdR <- function(variable, data, model, modeltable, eMax, rMax, pMax, dMax) {
