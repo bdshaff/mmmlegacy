@@ -339,8 +339,11 @@ StringGen <- function(model_string, media_data, nonmedia_data, Panel, start_date
       dummiesPanel <- list()
       dummiesPanel1 <- list()
       for (i in 1:ncol(dum_all)) {
-        rep(dum_all[i], Panel) -> dummiesPanel
-        bind_rows(dummiesPanel) -> dummiesPanel1[i]
+        #rep(dum_all[i], Panel) -> dummiesPanel
+        #bind_rows(dummiesPanel) -> dummiesPanel1[i]
+        #data.table::rbindlist(dummiesPanel)
+        dummiesPanel <- replicate(Panel, dum_all[i],simplify = FALSE)
+        dummiesPanel1[i] <- dummiesPanel
       }
       as.data.frame((dummiesPanel1)) -> dummiesPanel
       names(dummiesPanel) <- names(dum_all)
