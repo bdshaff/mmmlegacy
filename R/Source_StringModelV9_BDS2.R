@@ -1438,7 +1438,7 @@ createAdR <- function(data, data_piv, var_name, type) {
     for (column in ns[col_indexes]) {
       c[[column]] <- tmp[column]
       start <- Sys.time()
-      c[[sprintf("%s_exploded", column)]] <- createColumns(tmp[column], column, params)
+      c[[sprintf("%s_exploded", column)]] <- OneStepBrandScience::createColumns(tmp[column], column, params)
       end <- Sys.time()
       print(sprintf("%s - %s: %s", dma, column, end - start))
     }
